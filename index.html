@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>វិទ្យាស្ថានពហុបច្ចេកទេសខេត្តព្រះសីហនុ</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #004a99; --secondary: #0066cc; --success: #27ae60;
+            --warning: #f39c12; --danger: #e74c3c; --light-bg: #f4f7f6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kantumruy Pro', sans-serif; }
+        body { background-color: var(--light-bg); color: #333; }
+        
+        header { 
+            background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+            color: white; padding: 15px 5%; display: flex; 
+            justify-content: space-between; align-items: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .container { padding: 25px 5%; max-width: 1400px; margin: auto; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1.8fr; gap: 25px; margin-bottom: 25px; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+        .photo-upload-section { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 12px; background: #fafafa; }
+        #photo-preview { width: 110px; height: 110px; border-radius: 10px; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .std-thumb { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .full-width { grid-column: span 2; }
+        label { display: block; margin-bottom: 4px; font-weight: bold; color: #555; font-size: 13px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+
+        .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+        .btn-save { background: var(--primary); color: white; width: 100%; margin-top: 15px; justify-content: center; padding: 12px; }
+        .btn-excel { background: #1d6f42; color: white; }
+        .btn-report { background: #6c5ce7; color: white; }
+        .btn-cancel { background: #95a5a6; color: white; margin-top: 10px; width: 100%; justify-content: center; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f8f9fa; color: var(--primary); padding: 12px; text-align: left; border-bottom: 2px solid #eee; font-size: 13px; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #report-area, #report-area * { visibility: visible; }
+            #report-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="report-area" style="display: none; padding: 40px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="PIP.com.png" alt="Logo">
+            <h1 style="color: var(--primary);">វិទ្យាស្ថានពហុបច្ចេកទេសខេត្តព្រះសីហនុ</h1>
+
+        <p style="font-size: 0.8em;">**********************************</p>
+
+            <h3>របាយការណ៍បញ្ជីឈ្មោះសិស្សសរុប</h3>
+            <p id="report-date"></p>
+        </div>
+        <table border="1" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>ល.រ</th>
+                    <th>ឈ្មោះសិស្ស</th>
+                    <th>ភេទ</th>
+                    <th>ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th>ជំនាញ</th>
+                    <th>លេខទូរស័ព្ទ</th>
+                    <th>តម្លៃសិក្សា</th>
+                </tr>
+            </thead>
+            <tbody id="report-body"></tbody>
+            <tfoot>
+                <tr style="background: #eee; font-weight: bold;">
+                    <td colspan="6" style="text-align: right; padding: 10px;">សរុបទឹកប្រាក់រួម ($):</td>
+                    <td id="report-total" style="padding: 10px;"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <header class="no-print">
+        <h2><img  src="PIP.com.png" alt="PIP.com" width="70" height="70"></img> វិទ្យាស្ថានពហុបច្ចេកទេសខេត្តព្រះសីហនុ </h2>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+            <button class="btn btn-report" onclick="printSummary()"><i class="fas fa-print"></i> របាយការណ៍</button>
+        </div>
+    </header>
+
+    <div class="container no-print">
+        <div class="main-layout">
+            <div class="card">
+                <h3 id="formTitle" style="color: var(--primary); margin-bottom: 15px;">ចុះឈ្មោះសិស្ស</h3>
+                <div class="photo-upload-section">
+                    <img id="photo-preview" src="https://via.placeholder.com/110" alt="Student Photo">
+                    <input type="file" id="fileInput" accept="image/*" onchange="previewFile()" style="font-size: 11px;">
+                </div>
+                <input type="hidden" id="editId">
+                <div class="form-grid">
+                    <div class="full-width"><label>ឈ្មោះសិស្ស</label><input type="text" id="sName" placeholder="ឈ្មោះពេញ"></div>
+                    <div><label>ភេទ</label><select id="sGender"><option>ប្រុស</option><option>ស្រី</option></select></div>
+                    <div><label>ថ្ងៃខែឆ្នាំកំណើត</label><input type="date" id="sDob"></div>
+                    <div class="full-width"><label>លេខទូរស័ព្ទ</label><input type="text" id="sPhone" placeholder="012 345 678"></div>
+                    <div class="full-width"><label>ជំនាញ</label>
+                        <select id="sMajor">
+                            <option>ព័ត៌មានវិទ្យា</option><option>គណនេយ្យ</option><option>រថយន្ត</option><option>អគ្គីសនី</option>
+                            <option>សំណង់</option><option>បរិខាម៉ាសុីនត្រជាក់</option><option>អ៊ុតសក់</option><option>ជាងពិដាន</option>
+                        </select>
+                    </div>
+                    <div class="full-width"><label>តម្លៃសិក្សា ($)</label>
+                        <select id="sPrice">
+                            <option value="250">250$</option><option value="300">300$</option><option value="400">400$</option>
+                            <option value="450">450$</option><option value="500">500$</option><option value="600">600$</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="btnAction" class="btn btn-save" onclick="saveStudent()"><i class="fas fa-save"></i> រក្សាទុក</button>
+                <button id="btnCancel" class="btn btn-cancel" style="display:none;" onclick="resetForm()">បោះបង់</button>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3><i class="fas fa-list-ul"></i> បញ្ជីឈ្មោះសិស្ស</h3>
+                    <span id="totalBadge" style="background: var(--primary); color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">សរុប: 0 នាក់</span>
+                </div>
+                <input type="text" id="search" onkeyup="searchStudent()" placeholder="ស្វែងរកឈ្មោះ..." style="margin: 15px 0; padding: 12px; border: 2px solid #eee; border-radius: 10px; width: 100%;">
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>រូបថត</th>
+                                <th>ឈ្មោះ</th>
+                                <th>ភេទ</th>
+                                <th>ថ្ងៃកំណើត</th>
+                                <th>ជំនាញ</th>
+                                <th>តម្លៃ</th>
+                                <th>សកម្មភាព</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let students = JSON.parse(localStorage.getItem('studentDB_V12')) || [];
+        let currentPhoto = "https://via.placeholder.com/110";
+
+        function previewFile() {
+            const file = document.getElementById('fileInput').files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => { document.getElementById('photo-preview').src = reader.result; currentPhoto = reader.result; }
+            if (file) reader.readAsDataURL(file);
+        }
+
+        function saveStudent() {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('sName').value;
+            if(!name) return alert("សូមបញ្ចូលឈ្មោះសិស្ស!");
+
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                name: name,
+                gender: document.getElementById('sGender').value,
+                dob: document.getElementById('sDob').value,
+                phone: document.getElementById('sPhone').value,
+                major: document.getElementById('sMajor').value,
+                price: parseFloat(document.getElementById('sPrice').value),
+                photo: currentPhoto
+            };
+
+            if(id) {
+                let idx = students.findIndex(s => s.id == id);
+                students[idx] = data;
+            } else {
+                students.push(data);
+            }
+
+            localStorage.setItem('studentDB_V12', JSON.stringify(students));
+            render();
+            resetForm();
+        }
+
+        function render() {
+            const tBody = document.getElementById('tBody');
+            tBody.innerHTML = students.map(s => `
+                <tr>
+                    <td><img src="${s.photo}" class="std-thumb"></td>
+                    <td><b>${s.name}</b><br><small>${s.phone}</small></td>
+                    <td>${s.gender}</td>
+                    <td>${s.dob || '---'}</td>
+                    <td>${s.major}</td>
+                    <td style="color:var(--success); font-weight:bold;">$${s.price}</td>
+                    <td>
+                        <button onclick="editStd(${s.id})" style="color:var(--warning); border:none; background:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteStd(${s.id})" style="color:var(--danger); border:none; background:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('totalBadge').innerText = `សរុប: ${students.length} នាក់`;
+        }
+
+        function editStd(id) {
+            const s = students.find(s => s.id == id);
+            document.getElementById('editId').value = s.id;
+            document.getElementById('sName').value = s.name;
+            document.getElementById('sGender').value = s.gender;
+            document.getElementById('sDob').value = s.dob || '';
+            document.getElementById('sPhone').value = s.phone;
+            document.getElementById('sMajor').value = s.major;
+            document.getElementById('sPrice').value = s.price;
+            document.getElementById('photo-preview').src = s.photo;
+            currentPhoto = s.photo;
+            document.getElementById('btnAction').innerText = "ធ្វើបច្ចុប្បន្នភាព";
+            document.getElementById('btnCancel').style.display = "block";
+        }
+
+        function resetForm() {
+            document.getElementById('editId').value = "";
+            document.getElementById('sName').value = "";
+            document.getElementById('sDob').value = "";
+            document.getElementById('sPhone').value = "";
+            document.getElementById('photo-preview').src = "https://via.placeholder.com/110";
+            currentPhoto = "https://via.placeholder.com/110";
+            document.getElementById('btnAction').innerText = "រក្សាទុក";
+            document.getElementById('btnCancel').style.display = "none";
+        }
+
+        function deleteStd(id) {
+            if(confirm("លុបទិន្នន័យនេះ?")) {
+                students = students.filter(s => s.id != id);
+                localStorage.setItem('studentDB_V12', JSON.stringify(students));
+                render();
+            }
+        }
+
+        function searchStudent() {
+            let filter = document.getElementById('search').value.toUpperCase();
+            let rows = document.getElementById('tBody').getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                let txt = rows[i].textContent || rows[i].innerText;
+                rows[i].style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
+        }
+
+        function printSummary() {
+            if(students.length === 0) return alert("គ្មានទិន្នន័យ!");
+            const rBody = document.getElementById('report-body');
+            let total = 0;
+            rBody.innerHTML = students.map((s, i) => {
+                total += s.price;
+                return `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.gender}</td><td>${s.dob}</td><td>${s.major}</td><td>${s.phone}</td><td>$${s.price}</td></tr>`;
+            }).join('');
+            document.getElementById('report-total').innerText = "$" + total.toFixed(2);
+            document.getElementById('report-date').innerText = "ថ្ងៃទីបោះពុម្ព៖ " + new Date().toLocaleDateString('km-KH');
+            window.print();
+        }
+
+        function exportToExcel() {
+            const worksheet = XLSX.utils.json_to_sheet(students.map(s => ({
+                "ឈ្មោះ": s.name, "ភេទ": s.gender, "ថ្ងៃកំណើត": s.dob, "ជំនាញ": s.major, "ទូរស័ព្ទ": s.phone, "តម្លៃ": s.price
+            })));
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+            XLSX.writeFile(workbook, "Student_List.xlsx");
+        }
+
+        window.onload = render;
+    </script>
+</body>
+</html>
